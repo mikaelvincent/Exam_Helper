@@ -7,7 +7,6 @@ from PIL import ImageGrab
 import fitz
 
 # Constants for configuration
-API_KEY = "REDACTED" 
 MODEL_NAME = "gpt-4o"
 TRIGGER_KEY = 'caps lock'               # Trigger key to capture screenshot
 TEXT_CONTEXT_FOLDER = "context_folder"  # Folder path for optional text context
@@ -68,9 +67,10 @@ def load_text_context(folder_path):
     """
     text_context = ""
     if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+        # Directory does not exist, return empty text_context
         return text_context
 
+    # Proceed to load text from files if directory exists
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
         if filename.lower().endswith('.txt'):
@@ -102,10 +102,11 @@ def send_image_to_openai(base64_image, text_context, api_key):
         "Authorization": f"Bearer {api_key}"
     }
 
+    # Prepare the message content
     user_message_content = [
         {
             "type": "text",
-            "text": "Given the image, directly provide answers to the question posed. Base your responses on the provided context, ensuring accuracy and relevance. Provide answers only."
+            "text": "Given the image input, directly provide clear and concise answers to the question posed. As much as possible, base your responses on the provided context, if any. Provide answers directly."
         },
         {
             "type": "image_url",
@@ -145,53 +146,76 @@ def clear_terminal():
 def main():
     """
     Main function to monitor for the trigger key, capture screenshots, send them to the OpenAI API,
-    and display the responses.
+    and display the responses. The function will continue to run until the user manually terminates the process.
     """
-    api_key = API_KEY
-    
     clear_terminal()
     
-    print(f"Press '{TRIGGER_KEY.upper()}' to capture a screenshot and analyze it. Press 'ESC' to exit.")
+    # Instructions to the user
+    print("DISCLAIMER:\n")
+    print("The creator, author, or distributor of this script assumes NO responsibility for any direct or indirect consequences, damages, or liabilities arising from the use or misuse of this program.\n")
+    print("This includes, but is not limited to, legal, academic, financial, or personal repercussions.\n")
+    print("Use of this script is entirely at your own risk. By continuing, you acknowledge that you understand and accept these terms.\n")
+    print("----------------------------\n")
+    input("If you understand and agree to the above terms, press 'ENTER' to continue...")
+    clear_terminal()
+    print("IMPORTANT: After completing your tasks, it is NECESSARY to RESTART your computer to ensure no unintended API calls or processes continue running in the background.\n")
+    print("----------------------------\n")
+    input("If you understand, press 'ENTER' to continue...")
+    clear_terminal()
+    print("To add knowledge context, create a directory named 'context_folder' and place PDF and/or TXT files in it.\n")
+    print(f"Press '{TRIGGER_KEY.upper()}' to capture a screenshot and analyze it.\n")
+    print("\n----------------------------\n")
+    input("Press 'ENTER' to continue...")
+    clear_terminal()
+
+    # Prompt user for API key
+    api_key = input("Please enter your OpenAI API key: ")
+
+    clear_terminal()
+    
+    print(f"Waiting for you to press '{TRIGGER_KEY.upper()}' to capture a screenshot...")
 
     while True:
+        # Wait for the trigger key (Caps Lock) to be pressed
         keyboard.wait(TRIGGER_KEY)  # Wait for the trigger key to be pressed
 
         clear_terminal()
 
-        # Capture the screenshot
-        screenshot_path = capture_screenshot()
-
-        # Encode the screenshot to base64
-        base64_image = encode_image(screenshot_path)
-
-        # Load optional text context from the specified folder
-        text_context = load_text_context(TEXT_CONTEXT_FOLDER)
-
-        # Send the image and context to the OpenAI API
-        response = send_image_to_openai(base64_image, text_context, api_key)
-
-        # Delete the screenshot file
-        if os.path.exists(screenshot_path):
-            os.remove(screenshot_path)
-
-        # Process and display the response
         try:
-            # Extract the assistant's reply from the response
-            answer = response['choices'][0]['message']['content']
+            # Capture the screenshot
+            screenshot_path = capture_screenshot()
 
-            # Display the answer
-            print(answer)
+            # Encode the screenshot to base64
+            base64_image = encode_image(screenshot_path)
 
-            # Copy the answer to the clipboard
-            pyperclip.copy(answer)
-        except (KeyError, IndexError) as e:
-            print("Failed to process the response.")
-            print(f"Error: {e}")
-            pyperclip.copy("Error in processing the response.")
+            # Load optional text context from the specified folder
+            text_context = load_text_context(TEXT_CONTEXT_FOLDER)
 
-        # Exit the loop if 'ESC' key is pressed
-        if keyboard.is_pressed('esc'):
-            break
+            # Send the image and context to the OpenAI API
+            response = send_image_to_openai(base64_image, text_context, api_key)
+
+            # Delete the screenshot file
+            if os.path.exists(screenshot_path):
+                os.remove(screenshot_path)
+
+            # Process and display the response
+            try:
+                # Extract the assistant's reply from the response
+                answer = response['choices'][0]['message']['content']
+
+                # Display the answer
+                print(answer)
+
+                # Copy the answer to the clipboard
+                pyperclip.copy(answer)
+
+            except (KeyError, IndexError) as e:
+                print("Failed to process the response.")
+                print(f"Error: {e}")
+                pyperclip.copy("Error in processing the response.")
+        
+        except Exception as e:
+            print(f"\nAn error occurred: {e}\n")
 
 if __name__ == "__main__":
     main()
