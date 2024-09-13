@@ -35,4 +35,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 mikaelvincent.dev - tumampos@mikaelvincent.dev
 
 ## Project Link: 
-https://github.com/mikaelvincent/exam_helper
+https://github.com/mikaelvincent/Exam_Helper
